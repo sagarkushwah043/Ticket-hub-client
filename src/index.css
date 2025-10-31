@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+
+html,
+body {
+  @apply min-h-screen transition-colors duration-300;
+}
+
+/* 💜 Custom Saalet (Purple) Theme */
+.light {
+  --bg-color: #faf5ff; /* light purple tint */
+  --text-color: #2d0a44; /* deep text for light mode */
+  --accent-color: #6b21a8; /* purple-900 */
+}
+
+.dark {
+  --bg-color: #1a0029; /* dark purple tone */
+  --text-color: #e9d8fd; /* soft light text */
+  --accent-color: #c084fc; /* purple-400 for dark mode */
+}
+
+/* Apply theme globally */
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+/* Accent elements */
+.btn-accent {
+  background-color: var(--accent-color);
+  color: white;
+}
+.btn-accent:hover {
+  opacity: 0.9;
+}
+.text-accent {
+  color: var(--accent-color);
+}
