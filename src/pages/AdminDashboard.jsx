@@ -63,7 +63,7 @@ const AdminDashboard = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:5000/api/events');
+      const response = await fetch('https://ticket-hub-server-sv0b.onrender.com/api/events');
       const data = await response.json();
 
       if (data.success) {
@@ -105,7 +105,7 @@ const AdminDashboard = () => {
     setDeletingId(eventId);
     
     try {
-      const response = await fetch(`http://localhost:5000/api/events/${eventId}`, {
+      const response = await fetch(`https://ticket-hub-server-sv0b.onrender.com/api/events/${eventId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

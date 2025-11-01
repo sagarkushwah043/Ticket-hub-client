@@ -76,7 +76,7 @@ const EditEvent = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${API_URL}/api/events/${id}`);
+      const response = await fetch(`https://ticket-hub-server-sv0b.onrender.com/api/events/${id}`);
       const data = await response.json();
 
       if (data.success) {
@@ -147,11 +147,11 @@ const EditEvent = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/events/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+      const response = await fetch(`https://ticket-hub-server-sv0b.onrender.com/api/events/${id}`, {
+  method: "PUT",
+  headers: {
+    "Content-Type": "application/json",
+  },
         body: JSON.stringify({
           title: formData.title,
           description: formData.description,

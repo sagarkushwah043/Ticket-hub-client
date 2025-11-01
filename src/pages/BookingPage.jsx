@@ -38,7 +38,7 @@ const BookingPage = () => {
 
   const fetchEventDetails = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/events/${id}`);
+      const response = await fetch(`https://ticket-hub-server-sv0b.onrender.com/api/events/${id}`);
       const data = await response.json();
       if (data.success) {
         setEvent(data.data);
@@ -397,7 +397,7 @@ const BookingPage = () => {
         bookingStatus: 'Confirmed'
       };
 
-      const response = await fetch('http://localhost:5000/api/bookings', {
+      const response = await fetch('https://ticket-hub-server-sv0b.onrender.com/api/bookings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

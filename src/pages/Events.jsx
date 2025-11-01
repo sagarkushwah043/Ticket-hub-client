@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Search, Sparkles, TrendingUp, Filter, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { API_BASE_URL } from '../config/api';
 
 const Events = () => {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ const Events = () => {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/events');
+      const response = await fetch('https://ticket-hub-server-sv0b.onrender.com/api/events');
       const data = await response.json();
 
       if (data.success) {
