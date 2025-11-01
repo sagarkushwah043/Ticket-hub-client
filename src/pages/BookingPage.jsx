@@ -31,6 +31,9 @@ const BookingPage = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const [highlightClass, setHighlightClass] = useState('hidden');
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [cardDigits, setCardDigits] = useState(Array(16).fill('#'));
 
   useEffect(() => {
     fetchEventDetails();
@@ -58,26 +61,23 @@ const BookingPage = () => {
     }
   };
 
-  const formatCardNumber = (value) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const matches = v.match(/\d{4,16}/g);
-    const match = (matches && matches[0]) || '';
-    const parts = [];
-
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-
-    if (parts.length) {
-      return parts.join(' ');
-    } else {
-      return value;
-    }
-  };
-
   const handleCardNumberChange = (e) => {
-    const formatted = formatCardNumber(e.target.value);
-    setFormData(prev => ({ ...prev, cardNumber: formatted }));
+    const value = e.target.value.replace(/\D/g, '').slice(0, 16);
+    setFormData(prev => ({ ...prev, cardNumber: value }));
+    
+    const newDigits = Array(16).fill('#');
+    for (let i = 0; i < value.length; i++) {
+      if (i >= 4 && i < 12) {
+        newDigits[i] = '*';
+      } else {
+        newDigits[i] = value[i];
+      }
+    }
+    setCardDigits(newDigits);
+    
+    if (errors.cardNumber) {
+      setErrors(prev => ({ ...prev, cardNumber: '' }));
+    }
   };
 
   const handleExpiryChange = (e) => {
@@ -86,6 +86,17 @@ const BookingPage = () => {
       value = value.slice(0, 2) + '/' + value.slice(2, 4);
     }
     setFormData(prev => ({ ...prev, expiryDate: value }));
+    if (errors.expiryDate) {
+      setErrors(prev => ({ ...prev, expiryDate: '' }));
+    }
+  };
+
+  const handleCvvChange = (e) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+    setFormData(prev => ({ ...prev, cvv: value }));
+    if (errors.cvv) {
+      setErrors(prev => ({ ...prev, cvv: '' }));
+    }
   };
 
   const validateForm = () => {
@@ -124,7 +135,6 @@ const BookingPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ENHANCED PDF GENERATOR
   const generateEnhancedTicket = (booking, eventData) => {
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -135,7 +145,6 @@ const BookingPage = () => {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    // ========== HEADER SECTION ==========
     doc.setFillColor(147, 51, 234);
     doc.rect(0, 0, pageWidth, 50, 'F');
     
@@ -157,7 +166,6 @@ const BookingPage = () => {
 
     let yPos = 60;
 
-    // Booking Status Badge
     doc.setFillColor(34, 197, 94);
     doc.roundedRect(15, yPos, 40, 10, 2, 2, 'F');
     doc.setTextColor(255, 255, 255);
@@ -177,7 +185,6 @@ const BookingPage = () => {
 
     yPos += 20;
 
-    // ========== EVENT DETAILS SECTION ==========
     doc.setFillColor(249, 250, 251);
     doc.rect(15, yPos, pageWidth - 30, 8, 'F');
     doc.setTextColor(0, 0, 0);
@@ -223,7 +230,6 @@ const BookingPage = () => {
     doc.text(eventData.category, 55, yPos);
     yPos += 10;
 
-    // ========== CUSTOMER DETAILS SECTION ==========
     doc.setFillColor(249, 250, 251);
     doc.rect(15, yPos, pageWidth - 30, 8, 'F');
     doc.setTextColor(0, 0, 0);
@@ -254,7 +260,6 @@ const BookingPage = () => {
     doc.text(booking.phone, 55, yPos);
     yPos += 12;
 
-    // ========== BOOKING SUMMARY SECTION ==========
     doc.setFillColor(249, 250, 251);
     doc.rect(15, yPos, pageWidth - 30, 8, 'F');
     doc.setTextColor(0, 0, 0);
@@ -297,7 +302,6 @@ const BookingPage = () => {
     }
     yPos += 15;
 
-    // ========== QR CODE SECTION ==========
     const qrSize = 45;
     const qrX = pageWidth - 25 - qrSize;
     const qrY = yPos;
@@ -315,7 +319,6 @@ const BookingPage = () => {
     doc.setTextColor(100, 100, 100);
     doc.text(booking._id.substring(0, 12), qrX + qrSize / 2, qrY + qrSize + 4, { align: 'center' });
 
-    // Important notice box
     const noticeY = qrY;
     const noticeWidth = qrX - 25;
     
@@ -345,7 +348,6 @@ const BookingPage = () => {
       noticeTextY += 5;
     });
 
-    // ========== FOOTER SECTION ==========
     const footerY = pageHeight - 35;
     
     doc.setDrawColor(200, 200, 200);
@@ -365,7 +367,6 @@ const BookingPage = () => {
     doc.setTextColor(147, 51, 234);
     doc.text('Terms & Conditions', pageWidth / 2, footerY + 24, { align: 'center' });
 
-    // Save PDF
     const fileName = `TicketHub_${booking.bookingReference || booking._id}.pdf`;
     doc.save(fileName);
   };
@@ -411,7 +412,6 @@ const BookingPage = () => {
         setBookingData(data.data);
         setBookingSuccess(true);
         
-        // Generate and download enhanced PDF
         setTimeout(() => {
           generateEnhancedTicket(data.data, event);
         }, 1000);
@@ -518,6 +518,85 @@ const BookingPage = () => {
     <div className={`min-h-screen py-12 px-4 ${
       theme === 'dark' ? 'bg-gray-900' : 'bg-gradient-to-br from-purple-50 to-pink-50'
     }`}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+        
+        .card-container {
+          transform-style: preserve-3d;
+          transition: transform 1s;
+        }
+        
+        .card-container.flip {
+          transform: rotateY(180deg);
+        }
+        
+        .card-container:hover .highlight-box {
+          display: none;
+        }
+        
+        .card-face {
+          backface-visibility: hidden;
+        }
+        
+        .card-front:before {
+          content: "";
+          position: absolute;
+          border: 12px solid #ff6be7;
+          border-radius: 100%;
+          left: -15%;
+          top: -35px;
+          height: 220px;
+          width: 220px;
+          filter: blur(13px);
+        }
+        
+        .card-front:after {
+          content: "";
+          position: absolute;
+          border: 12px solid #7288ff;
+          border-radius: 100%;
+          width: 220px;
+          top: 55%;
+          left: -150px;
+          height: 220px;
+          filter: blur(13px);
+        }
+        
+        .card-back:before {
+          content: "";
+          position: absolute;
+          border: 12px solid #ff6be7;
+          border-radius: 100%;
+          left: -15%;
+          top: -35px;
+          height: 220px;
+          width: 220px;
+          filter: blur(13px);
+        }
+        
+        .card-back:after {
+          content: "";
+          position: absolute;
+          border: 12px solid #7288ff;
+          border-radius: 100%;
+          width: 220px;
+          top: 55%;
+          left: -150px;
+          height: 220px;
+          filter: blur(13px);
+        }
+        
+        .digit-span {
+          display: flex;
+          flex-direction: column;
+          transition: .2s;
+        }
+        
+        .digit-span.filled {
+          transform: translateY(-30px);
+        }
+      `}</style>
+
       <div className="max-w-6xl mx-auto">
         <button
           onClick={() => navigate(-1)}
@@ -602,7 +681,7 @@ const BookingPage = () => {
                 Complete Your Booking
               </h2>
 
-              <form onSubmit={handleSubmit}>
+              <div onSubmit={handleSubmit}>
                 <div className="mb-8">
                   <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${
                     theme === 'dark' ? 'text-white' : 'text-gray-900'
@@ -721,13 +800,68 @@ const BookingPage = () => {
                     Payment Details
                   </h3>
                   
-                  <div className={`p-4 rounded-lg mb-4 flex items-center gap-2 ${
+                  <div className={`p-4 rounded-lg mb-6 flex items-center gap-2 ${
                     theme === 'dark' ? 'bg-gray-700' : 'bg-blue-50'
                   }`}>
                     <Shield className={`w-5 h-5 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
                     <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
                       Your payment information is secure and encrypted
                     </span>
+                  </div>
+
+                  {/* Animated Credit Card */}
+                  <div className={`card-container relative max-w-[380px] mx-auto mb-8 h-[210px] ${isFlipped ? 'flip' : ''}`}>
+                    <div className={`highlight-box absolute border-[3px] border-white rounded-2xl z-20 transition-all duration-300 pointer-events-none ${highlightClass}`} style={{boxShadow: '0 0 15px rgba(255,255,255,0.9)'}}></div>
+                    
+                    {/* Card Front */}
+                    <section className="card-front card-face relative w-full h-[210px] rounded-3xl p-6 overflow-hidden text-white shadow-2xl" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}}>
+                      <div className="relative z-10 h-full flex flex-col justify-between">
+                        <div className="flex items-center justify-between font-semibold text-base">
+                          <div>Credit Card</div>
+                          <svg xmlns="http://www.w3.org/2000/svg" height="36" width="54" viewBox="-96 -98.908 832 593.448">
+                            <path fill="#ff5f00" d="M224.833 42.298h190.416v311.005H224.833z"/>
+                            <path fill="#eb001b" d="M244.446 197.828a197.448 197.448 0 0175.54-155.475 197.777 197.777 0 100 311.004 197.448 197.448 0 01-75.54-155.53z"/>
+                            <path fill="#f79e1b" d="M640 197.828a197.777 197.777 0 01-320.015 155.474 197.777 197.777 0 000-311.004A197.777 197.777 0 01640 197.773z"/>
+                          </svg>
+                        </div>
+
+                        <div className="text-xl flex h-[30px] overflow-hidden tracking-wider">
+                          {cardDigits.map((digit, index) => (
+                            <span 
+                              key={index}
+                              className={`digit-span ${digit !== '#' ? 'filled' : ''} ${(index + 1) % 4 === 0 ? 'mr-2.5' : ''}`}
+                            >
+                              #<br/>{digit}
+                            </span>
+                          ))}
+                        </div>
+
+                        <div className="flex items-end justify-between text-xs">
+                          <div className="uppercase flex-1">
+                            <div className="text-[11px] font-semibold mb-1 opacity-80">CARD HOLDER</div>
+                            <div className="text-sm font-medium">{formData.cardName || 'NAME ON CARD'}</div>
+                          </div>
+                          <div className="uppercase text-right">
+                            <div className="text-[11px] font-semibold mb-1 opacity-80">EXPIRES</div>
+                            <div className="text-sm font-medium">
+                              <span>{formData.expiryDate ? formData.expiryDate.split('/')[0] : 'MM'}</span>/
+                              <span>{formData.expiryDate ? formData.expiryDate.split('/')[1] : 'YY'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Card Back */}
+                    <section className="card-back card-face absolute top-0 left-0 w-full h-[210px] rounded-3xl pt-6 overflow-hidden text-white shadow-2xl" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', transform: 'rotateY(180deg)'}}>
+                      <div className="h-9 w-full bg-gray-800 relative z-10 mb-5"></div>
+                      <div className="relative z-10 px-6 flex flex-col items-end text-sm font-semibold uppercase">
+                        <span className="mb-1.5">CVV</span>
+                        <div className="bg-white rounded-lg h-10 w-full text-black flex items-center justify-end px-3 text-xl tracking-widest">
+                          {formData.cvv ? '•'.repeat(formData.cvv.length) : ''}
+                        </div>
+                      </div>
+                    </section>
                   </div>
 
                   <div className="space-y-4">
@@ -742,7 +876,11 @@ const BookingPage = () => {
                         name="cardNumber"
                         value={formData.cardNumber}
                         onChange={handleCardNumberChange}
-                        maxLength="19"
+                        onFocus={() => {
+                          setIsFlipped(false);
+                          setHighlightClass('w-[335px] h-[30px] top-[92px] left-[22px]');
+                        }}
+                        maxLength="16"
                         className={`w-full px-4 py-3 rounded-lg border transition-all ${
                           theme === 'dark'
                             ? 'bg-gray-700 border-gray-600 text-white focus:border-purple-500'
@@ -750,7 +888,7 @@ const BookingPage = () => {
                         } focus:ring-2 focus:ring-purple-200 outline-none ${
                           errors.cardNumber ? 'border-red-500' : ''
                         }`}
-                        placeholder="1234 5678 9012 3456"
+                        placeholder="1234567890123456"
                       />
                       {errors.cardNumber && (
                         <p className="text-red-500 text-sm mt-1">{errors.cardNumber}</p>
@@ -768,6 +906,10 @@ const BookingPage = () => {
                         name="cardName"
                         value={formData.cardName}
                         onChange={handleInputChange}
+                        onFocus={() => {
+                          setIsFlipped(false);
+                          setHighlightClass('w-[165px] h-[38px] top-[160px] left-[22px]');
+                        }}
                         className={`w-full px-4 py-3 rounded-lg border transition-all ${
                           theme === 'dark'
                             ? 'bg-gray-700 border-gray-600 text-white focus:border-purple-500'
@@ -794,6 +936,10 @@ const BookingPage = () => {
                           name="expiryDate"
                           value={formData.expiryDate}
                           onChange={handleExpiryChange}
+                          onFocus={() => {
+                            setIsFlipped(false);
+                            setHighlightClass('w-[80px] h-[38px] top-[160px] left-[275px]');
+                          }}
                           maxLength="5"
                           className={`w-full px-4 py-3 rounded-lg border transition-all ${
                             theme === 'dark'
@@ -819,7 +965,15 @@ const BookingPage = () => {
                           type="text"
                           name="cvv"
                           value={formData.cvv}
-                          onChange={handleInputChange}
+                          onChange={handleCvvChange}
+                          onFocus={() => {
+                            setIsFlipped(true);
+                            setHighlightClass('w-[335px] h-[54px] top-[80px] left-[22px]');
+                          }}
+                          onBlur={() => {
+                            setIsFlipped(false);
+                            setHighlightClass('hidden');
+                          }}
                           maxLength="4"
                           className={`w-full px-4 py-3 rounded-lg border transition-all ${
                             theme === 'dark'
@@ -839,7 +993,8 @@ const BookingPage = () => {
                 </div>
 
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleSubmit}
                   disabled={processing}
                   className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-lg rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
                 >
@@ -861,7 +1016,7 @@ const BookingPage = () => {
                 }`}>
                   By completing this booking, you agree to our Terms of Service and Privacy Policy
                 </p>
-              </form>
+              </div>
             </div>
           </div>
         </div>
