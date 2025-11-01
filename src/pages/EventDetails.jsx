@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Calendar, MapPin, Users, Clock, ArrowLeft, Tag } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
+import { API_BASE_URL } from "../config/api";
+
 
 const EventDetails = () => {
   const { id } = useParams();
@@ -19,8 +21,9 @@ const EventDetails = () => {
   const fetchEventDetails = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:5000/api/events/${id}`);
-      const data = await res.json();
+    const res = await fetch(`${API_BASE_URL}/api/events/${id}`);
+const data = await res.json();
+
 
       if (data.success) {
         setEvent(data.data);

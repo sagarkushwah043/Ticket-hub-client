@@ -34,6 +34,7 @@ const AdminDashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
   const [deleteModal, setDeleteModal] = useState({ show: false, eventId: null, eventTitle: '' });
   const [deletingId, setDeletingId] = useState(null);
 
@@ -60,111 +61,31 @@ const AdminDashboard = () => {
   const loadEvents = async () => {
     try {
       setLoading(true);
-      // Simulate API call with demo data
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      setError(null);
       
-      const demoEvents = [
-        {
-          _id: '1',
-          title: 'Summer Music Festival 2025',
-          description: 'Amazing outdoor music festival',
-          date: '2025-07-15',
-          time: '18:30',
-          location: 'Los Angeles, CA',
-          venue: 'Hollywood Bowl',
-          price: 149.99,
-          capacity: 5000,
-          availableSeats: 4523,
-          bookings: 477,
-          category: 'Festival',
-          image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=800',
-          organizer: 'Live Nation',
-          status: 'active'
-        },
-        {
-          _id: '2',
-          title: 'Tech Conference 2025',
-          description: 'Annual technology conference',
-          date: '2025-08-20',
-          time: '09:00',
-          location: 'San Francisco, CA',
-          venue: 'Moscone Center',
-          price: 299.00,
-          capacity: 2000,
-          availableSeats: 1856,
-          bookings: 144,
-          category: 'Conference',
-          image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
-          organizer: 'TechWorld',
-          status: 'active'
-        },
-        {
-          _id: '3',
-          title: 'Food & Wine Festival',
-          description: 'Culinary excellence showcase',
-          date: '2025-09-10',
-          time: '12:00',
-          location: 'New York, NY',
-          venue: 'Central Park',
-          price: 89.50,
-          capacity: 3000,
-          availableSeats: 2734,
-          bookings: 266,
-          category: 'Festival',
-          image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800',
-          organizer: 'Culinary Arts',
-          status: 'active'
-        },
-        {
-          _id: '4',
-          title: 'Jazz Night Live',
-          description: 'Intimate jazz performance',
-          date: '2025-06-25',
-          time: '20:00',
-          location: 'Chicago, IL',
-          venue: 'Blue Note Jazz Club',
-          price: 65.00,
-          capacity: 500,
-          availableSeats: 412,
-          bookings: 88,
-          category: 'Concert',
-          image: 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=800',
-          organizer: 'Jazz Society',
-          status: 'active'
-        },
-        {
-          _id: '5',
-          title: 'Marathon 2025',
-          description: 'Annual city marathon',
-          date: '2025-10-05',
-          time: '07:00',
-          location: 'Boston, MA',
-          venue: 'City Streets',
-          price: 125.00,
-          capacity: 10000,
-          availableSeats: 8945,
-          bookings: 1055,
-          category: 'Sports',
-          image: 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=800',
-          organizer: 'Marathon Org',
-          status: 'active'
-        }
-      ];
-      
-      setEvents(demoEvents);
-      
-      // Calculate stats
-      const totalBookings = demoEvents.reduce((sum, event) => sum + event.bookings, 0);
-      const totalRevenue = demoEvents.reduce((sum, event) => sum + (event.bookings * event.price), 0);
-      
-      setStats({
-        totalEvents: demoEvents.length,
-        totalBookings: totalBookings,
-        totalRevenue: totalRevenue,
-        activeEvents: demoEvents.filter(e => e.status === 'active').length
-      });
+      const response = await fetch('http://localhost:5000/api/events');
+      const data = await response.json();
+
+      if (data.success) {
+        setEvents(data.data);
+        
+        // Calculate stats from fetched data
+        const totalBookings = data.data.reduce((sum, event) => sum + (event.bookings || 0), 0);
+        const totalRevenue = data.data.reduce((sum, event) => sum + ((event.bookings || 0) * (event.price || 0)), 0);
+        
+        setStats({
+          totalEvents: data.data.length,
+          totalBookings: totalBookings,
+          totalRevenue: totalRevenue,
+          activeEvents: data.data.filter(e => e.status === 'active').length
+        });
+      } else {
+        setError('Failed to fetch events');
+        console.error('API Error:', data.message);
+      }
     } catch (error) {
       console.error('Error fetching events:', error);
+      setError('Failed to connect to server. Please check if the backend is running.');
     } finally {
       setLoading(false);
     }
@@ -184,26 +105,38 @@ const AdminDashboard = () => {
     setDeletingId(eventId);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setEvents(events.filter(e => e._id !== eventId));
-      setDeleteModal({ show: false, eventId: null, eventTitle: '' });
-      
-      // Recalculate stats
-      const updatedEvents = events.filter(e => e._id !== eventId);
-      const totalBookings = updatedEvents.reduce((sum, event) => sum + event.bookings, 0);
-      const totalRevenue = updatedEvents.reduce((sum, event) => sum + (event.bookings * event.price), 0);
-      
-      setStats({
-        totalEvents: updatedEvents.length,
-        totalBookings: totalBookings,
-        totalRevenue: totalRevenue,
-        activeEvents: updatedEvents.filter(e => e.status === 'active').length
+      const response = await fetch(`http://localhost:5000/api/events/${eventId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        
+        }
       });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Remove event from local state
+        const updatedEvents = events.filter(e => e._id !== eventId);
+        setEvents(updatedEvents);
+        setDeleteModal({ show: false, eventId: null, eventTitle: '' });
+        
+        // Recalculate stats
+        const totalBookings = updatedEvents.reduce((sum, event) => sum + (event.bookings || 0), 0);
+        const totalRevenue = updatedEvents.reduce((sum, event) => sum + ((event.bookings || 0) * (event.price || 0)), 0);
+        
+        setStats({
+          totalEvents: updatedEvents.length,
+          totalBookings: totalBookings,
+          totalRevenue: totalRevenue,
+          activeEvents: updatedEvents.filter(e => e.status === 'active').length
+        });
+      } else {
+        alert(data.message || 'Failed to delete event');
+      }
     } catch (error) {
       console.error('Error deleting event:', error);
-      alert('Failed to delete event');
+      alert('Failed to delete event. Please try again.');
     } finally {
       setDeletingId(null);
     }
@@ -278,6 +211,33 @@ const AdminDashboard = () => {
     );
   }
 
+  // Error state
+  if (error) {
+    return (
+      <div className={`min-h-screen ${bgClass} flex items-center justify-center p-4`}>
+        <motion.div 
+          className={`${cardBg} rounded-2xl shadow-2xl p-8 max-w-md w-full border-2 border-red-500`}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+        >
+          <div className="text-center">
+            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>Error Loading Events</h2>
+            <p className={`${textSecondary} mb-6`}>{error}</p>
+            <motion.button
+              onClick={loadEvents}
+              className={`${buttonPrimary} text-white px-6 py-3 rounded-xl font-semibold`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Try Again
+            </motion.button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen ${bgClass} py-25 relative overflow-hidden transition-colors duration-700`}>
       {/* Decorative background */}
@@ -315,7 +275,6 @@ const AdminDashboard = () => {
               whileHover={{ scale: 1.05, y: -2, boxShadow: theme === 'dark' ? '0 10px 30px rgba(147, 51, 234, 0.3)' : '0 10px 30px rgba(236, 72, 153, 0.3)' }}
               whileTap={{ scale: 0.95 }}
             >
-              {/* Animated background on hover */}
               <motion.div
                 className={`absolute inset-0 ${theme === 'dark' ? 'bg-gradient-to-r from-purple-600/20 to-blue-600/20' : 'bg-gradient-to-r from-fuchsia-500/20 to-pink-500/20'}`}
                 initial={{ x: '-100%' }}
@@ -344,7 +303,6 @@ const AdminDashboard = () => {
               }}
               whileTap={{ scale: 0.95 }}
             >
-              {/* Animated shine effect */}
               <motion.div
                 className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
                 initial={{ x: '-100%' }}
@@ -352,7 +310,6 @@ const AdminDashboard = () => {
                 transition={{ duration: 0.6 }}
               />
               
-              {/* Pulsing background */}
               <motion.div
                 className="absolute inset-0 bg-red-700"
                 animate={{ opacity: [0, 0.2, 0] }}
@@ -368,7 +325,6 @@ const AdminDashboard = () => {
               </motion.div>
               <span className="relative z-10">Logout</span>
               
-              {/* Particle effects on hover */}
               <motion.div
                 className="absolute inset-0 pointer-events-none"
                 initial={{ opacity: 0 }}
@@ -505,7 +461,7 @@ const AdminDashboard = () => {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-4">
                             <motion.img 
-                              src={event.image} 
+                              src={event.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800'} 
                               alt={event.title}
                               className="w-16 h-16 rounded-xl object-cover shadow-md"
                               whileHover={{ scale: 1.1 }}
@@ -514,7 +470,7 @@ const AdminDashboard = () => {
                               <div className={`font-bold ${textPrimary} text-sm mb-1`}>{event.title}</div>
                               <div className={`${textMuted} text-xs flex items-center gap-1`}>
                                 <Users className="h-3 w-3" />
-                                {event.organizer}
+                                {event.organizer || 'Event Organizer'}
                               </div>
                             </div>
                           </div>
@@ -527,36 +483,36 @@ const AdminDashboard = () => {
                             </div>
                             <div className={`flex items-center gap-2 ${textMuted} text-xs`}>
                               <Clock className="h-3 w-3" />
-                              {event.time}
+                              {event.time || 'TBA'}
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
                           <div className={`text-sm ${textPrimary}`}>
-                            <div className="font-semibold mb-1">{event.venue}</div>
+                            <div className="font-semibold mb-1">{event.venue || 'Venue TBA'}</div>
                             <div className={`flex items-center gap-1 ${textMuted} text-xs`}>
                               <MapPin className="h-3 w-3" />
-                              {event.location}
+                              {event.location || 'Location TBA'}
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
                           <div className={`text-lg font-bold ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`}>
-                            ${event.price.toFixed(2)}
+                            ${(event.price || 0).toFixed(2)}
                           </div>
                         </td>
                         <td className="px-6 py-4">
                           <div className={`text-sm ${textPrimary}`}>
-                            <div className="font-bold text-lg mb-1">{event.bookings}</div>
+                            <div className="font-bold text-lg mb-1">{event.bookings || 0}</div>
                             <div className={`${textMuted} text-xs`}>
-                              {event.availableSeats} / {event.capacity} available
+                              {event.availableSeats || event.capacity || 0} / {event.capacity || 0} available
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
                               <motion.div 
                                 className={`h-1.5 rounded-full ${theme === 'dark' ? 'bg-purple-600' : 'bg-fuchsia-600'}`}
-                                style={{ width: `${(event.bookings / event.capacity) * 100}%` }}
+                                style={{ width: `${event.capacity ? ((event.bookings || 0) / event.capacity) * 100 : 0}%` }}
                                 initial={{ width: 0 }}
-                                animate={{ width: `${(event.bookings / event.capacity) * 100}%` }}
+                                animate={{ width: `${event.capacity ? ((event.bookings || 0) / event.capacity) * 100 : 0}%` }}
                                 transition={{ delay: index * 0.05 + 0.3, duration: 0.5 }}
                               />
                             </div>
@@ -572,7 +528,7 @@ const AdminDashboard = () => {
                             whileHover={{ scale: 1.05 }}
                           >
                             {event.status === 'active' ? <CheckCircle className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-                            {event.status}
+                            {event.status || 'active'}
                           </motion.span>
                         </td>
                         <td className="px-6 py-4">
